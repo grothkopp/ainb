@@ -1,0 +1,3 @@
+[submodule "vendor/lost"]
+	path = vendor/lost
+	url = https://github.com/grothkopp/lost.js.git
