@@ -1,5 +1,5 @@
-import { Lost } from "/lost.js";
-import { LostUI } from "/lost-ui.js";
+import { Lost } from "./vendor/lost/lost.js";
+import { LostUI } from "./vendor/lost/lost-ui.js";
 import MarkdownIt from "https://esm.sh/markdown-it@13.0.1";
 
 import { LlmManager, DEFAULT_SYSTEM_PROMPT } from "./llm.js";
