@@ -13,15 +13,35 @@ import { PromptCellManager } from "./cell_prompt.js";
 const STORAGE_KEY = "app-ainotebook-v1";
 
 const DEFAULT_NOTEBOOK = {
-  title: "New Notebook",
+  title: "Welcome to AI Notebook",
   notebookModelId: "",
   notebookParams: "",
   cells: [
     {
       id: "cell_intro",
       type: "markdown",
-      name: "notes",
-      text: "# New notebook\n\nWrite some notes here…",
+      name: "welcome",
+      text: "# Welcome to AI Notebook (ainb)\n\n" +
+        "AI Notebook is a reactive notebook environment for working with LLMs.\n\n" +
+        "## Getting Started\n\n" +
+        "**1. Configure LLM Providers**\n" +
+        "- Click the ⚙️ settings icon in the top right corner\n" +
+        "- Add your API keys for OpenAI, Anthropic, Google, or other providers\n" +
+        "- Save your settings\n\n" +
+        "**2. Running Cells**\n" +
+        "- Click the ▶ play button on any cell to execute it\n" +
+        "- Use 'Run All' in the toolbar to execute all cells in sequence\n" +
+        "- Press 'Stop All' to cancel running operations\n\n" +
+        "**3. Cell Types**\n" +
+        "- **Markdown**: Write notes and documentation\n" +
+        "- **Variable**: Store reusable text values (like system prompts)\n" +
+        "- **Prompt**: Send prompts to LLMs and get responses\n" +
+        "- **Code**: Execute JavaScript to transform data\n\n" +
+        "**4. Referencing Cells**\n" +
+        "- Give each cell a unique name (e.g., 'notes', 'summary')\n" +
+        "- Reference cell outputs using `{{cellname}}` syntax\n" +
+        "- Cells automatically re-run when their dependencies change\n\n" +
+        "Try the example cells below to see how it works!",
       modelId: "",
       lastOutput: "",
       error: "",
@@ -31,7 +51,23 @@ const DEFAULT_NOTEBOOK = {
       id: "cell_var_systemprompt",
       type: "variable",
       name: "var_systemprompt",
-      text: DEFAULT_SYSTEM_PROMPT,
+      text: DEFAULT_SYSTEM_PROMPT + "\n\n" +
+        "💡 This is a **Variable cell**. It stores text that can be reused in other cells. " +
+        "Variables are perfect for system prompts, templates, or any text you want to reference multiple times. " +
+        "Reference this variable in prompt cells using {{var_systemprompt}}.",
+      modelId: "",
+      lastOutput: "",
+      error: "",
+      _stale: false
+    },
+    {
+      id: "cell_example_notes",
+      type: "markdown",
+      name: "notes",
+      text: "# Example Notes\n\n" +
+        "- AI Notebook supports reactive programming\n" +
+        "- Cells can reference each other using {{name}} syntax\n" +
+        "- Changes propagate automatically through the notebook",
       modelId: "",
       lastOutput: "",
       error: "",
@@ -43,7 +79,11 @@ const DEFAULT_NOTEBOOK = {
       name: "summary",
       text:
         "Summarize the notes from {{notes}} in 3 bullet points. " +
-        "Respond with a JSON Array like [\"point 1\", \"point 2\", \"point 3\"].",
+        "Respond with a JSON Array like [\"point 1\", \"point 2\", \"point 3\"].\n\n" +
+        "💡 This is a **Prompt cell**. It sends text to an LLM and displays the response. " +
+        "Notice how it references {{notes}} from the markdown cell above. " +
+        "You can set a specific model for this cell, or use the notebook's default LLM. " +
+        "The system prompt comes from {{var_systemprompt}}.",
       systemPrompt: "{{ var_systemprompt }}",
       params: "",
       _outputExpanded: false,
@@ -56,12 +96,48 @@ const DEFAULT_NOTEBOOK = {
       id: "cell_format",
       type: "code",
       name: "formatted",
-      text: "const items = {{summary}};\nreturn items.map(i => \"- \" + i).join(\"\\n\");",
+      text: "// 💡 This is a **Code cell**. It runs JavaScript to transform data.\n" +
+        "// This cell takes the {{summary}} output (a JSON array) and formats it as markdown.\n" +
+        "// Code cells can access outputs from other cells and perform any JavaScript operations.\n" +
+        "// The 'autorun' flag means this cell runs automatically when its dependencies change.\n\n" +
+        "const items = {{summary}};\n" +
+        "return items.map(i => \"- \" + i).join(\"\\n\");",
       modelId: "",
       lastOutput: "",
       error: "",
       _stale: false,
       autorun: true
+    }
+  ]
+};
+
+const NEW_NOTEBOOK = {
+  title: "New Notebook",
+  notebookModelId: "",
+  notebookParams: "",
+  cells: [
+    {
+      id: "cell_notes",
+      type: "markdown",
+      name: "notes",
+      text: "# New Notebook\n\nWrite your notes here…",
+      modelId: "",
+      lastOutput: "",
+      error: "",
+      _stale: false
+    },
+    {
+      id: "cell_prompt",
+      type: "prompt",
+      name: "prompt1",
+      text: "Your prompt here…",
+      systemPrompt: "",
+      params: "",
+      _outputExpanded: false,
+      modelId: "",
+      lastOutput: "",
+      error: "",
+      _stale: false
     }
   ]
 };
@@ -318,7 +394,7 @@ class AiNotebookApp {
    */
   createNotebook() {
     this.lost.create({
-      ...DEFAULT_NOTEBOOK,
+      ...NEW_NOTEBOOK,
       title: "New Notebook"
     });
   }
