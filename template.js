@@ -131,12 +131,20 @@ export class TemplateManager {
    * Expands all {{...}} templates in a string.
    * @param {string} template - The template string.
    * @param {Array} cells - List of available cells.
+   * @param {string} cellType - Optional cell type to apply security restrictions.
    * @returns {string} The expanded string.
    */
-  expandTemplate(template, cells) {
+  expandTemplate(template, cells, cellType = null) {
     if (!template) return "";
     return template.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, key) => {
       const trimmed = key.trim();
+      const { base } = this.parseKeyPath(trimmed);
+      
+      // Block ENV access in markdown cells for security
+      if (base === "ENV" && cellType === "markdown") {
+        return "[ENV access blocked in markdown cells]";
+      }
+      
       return this.resolveTemplateValue(trimmed, cells);
     });
   }

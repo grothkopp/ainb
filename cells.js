@@ -7,6 +7,7 @@ import {
 } from "./utils.js";
 import { createModelPicker, createParamsUi } from "./ui.js";
 import { DEFAULT_SYSTEM_PROMPT } from "./llm.js";
+import { sanitizeHtml } from "./sanitize.js";
 
 const OUTPUT_COLLAPSE_MAX_HEIGHT = 250;
 
@@ -385,7 +386,7 @@ export class CellRenderer {
             
         let contentToCompare = outputText;
         if (cell.type === "markdown") {
-             contentToCompare = this.app.templateManager.expandTemplate(cell.text || "", cells);
+             contentToCompare = this.app.templateManager.expandTemplate(cell.text || "", cells, "markdown");
         }
         
         const cached = this.outputCache.get(cell.id);
@@ -1049,8 +1050,9 @@ export class CellRenderer {
           : "Empty.";
     } else if (cell.type === "markdown") {
       output.classList.add("cell-output-markdown");
-      const expanded = this.app.templateManager.expandTemplate(cell.text || "", cells);
-      output.innerHTML = this.app.md.render(expanded);
+      const expanded = this.app.templateManager.expandTemplate(cell.text || "", cells, "markdown");
+      const rendered = this.app.md.render(expanded);
+      output.innerHTML = sanitizeHtml(rendered);
       // Cache expanded content for comparison
       this.outputCache.set(cell.id, expanded);
     } else if (parsed.isJson) {

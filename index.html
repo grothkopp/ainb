@@ -7,6 +7,21 @@
     content="width=device-width, initial-scale=1.0, user-scalable=no"
   />
   <meta name="theme-color" content="#ffffff" />
+  <meta http-equiv="Content-Security-Policy" 
+        content="default-src 'self'; 
+                 script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh; 
+                 style-src 'self' 'unsafe-inline'; 
+                 img-src 'self' data:; 
+                 connect-src *; 
+                 frame-src 'none'; 
+                 object-src 'none'; 
+                 base-uri 'self'; 
+                 form-action 'self';">
+  <!-- Note: 'unsafe-inline' and 'unsafe-eval' in script-src are needed for sandboxed iframe code execution.
+       This is safe because: (1) frame-src is 'none' preventing external iframes,
+       (2) we only use srcdoc iframes with sandbox="allow-scripts" which isolates code execution,
+       (3) markdown HTML is sanitized to prevent script injection,
+       (4) eval is only used within the sandboxed iframe, not in the main app context. -->
   <link rel="manifest" href="ainotebook.webmanifest">
   <link rel="icon" href="icon-512.png" type="image/png">
  

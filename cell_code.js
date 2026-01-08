@@ -41,25 +41,47 @@ export class CodeCellManager {
 <body>
 <script>
   (function() {
+    // srcdoc iframes have null origin and cannot reliably determine parent origin
+    // We use wildcard for postMessage, but parent validates the source
+    console.log('[Sandbox] Initialized. window.location.origin:', window.location.origin);
+    
     const reply = (payload) => {
-      try { parent.postMessage(payload, "*"); } catch (_) {}
+      console.log('[Sandbox] Sending reply:', payload.type);
+      try { 
+        parent.postMessage(payload, '*'); 
+        console.log('[Sandbox] Message sent successfully');
+      } catch (e) {
+        console.error('[Sandbox] Failed to send message:', e);
+      }
     };
+    
     window.addEventListener("message", async (event) => {
+      console.log('[Sandbox] Received message:', event.data?.type, 'from origin:', event.origin);
+      // srcdoc iframes receive messages from parent, no additional origin check needed here
+      // since we're already sandboxed and isolated
+      
       const data = event.data || {};
-      if (data.type !== "code-exec") return;
+      if (data.type !== "code-exec") {
+        console.log('[Sandbox] Ignoring non-code-exec message:', data.type);
+        return;
+      }
+      
+      console.log('[Sandbox] Executing code for cell:', data.cellId, 'version:', data.version);
       const { cellId, code, version } = data;
       try {
-        const runner = new Function(\`
+        // Use indirect eval to execute code in global scope
+        // This still requires unsafe-eval in CSP
+        const wrappedCode = \`(async () => {
           'use strict';
-          return (async () => {
-            let output;
-            \${code}
-            return typeof output !== "undefined" ? output : undefined;
-          })();
-        \`);
-        const value = await runner();
+          let output;
+          \${code}
+          return typeof output !== "undefined" ? output : undefined;
+        })()\`;
+        const value = await (0, eval)(wrappedCode);
+        console.log('[Sandbox] Code executed successfully. Result:', value);
         reply({ type: "code-result", cellId, version, value });
       } catch (err) {
+        console.error('[Sandbox] Code execution error:', err);
         reply({
           type: "code-error",
           cellId,
@@ -82,14 +104,34 @@ export class CodeCellManager {
    * @param {MessageEvent} event - The message event.
    */
   handleSandboxMessage(event) {
-    const data = event?.data || {};
-    if (!data || (data.type !== "code-result" && data.type !== "code-error")) {
+    console.log('[Parent] Received message:', event.data?.type, 'from origin:', event.origin);
+    console.log('[Parent] window.location.origin:', window.location.origin);
+    
+    // Validate origin - srcdoc iframes have 'null' origin
+    // Only accept messages from null origin (srcdoc) or same origin
+    if (event.origin !== 'null' && event.origin !== window.location.origin) {
+      console.warn('[Parent] Origin mismatch. Expected: null or', window.location.origin, 'Got:', event.origin);
       return;
     }
+    
+    const data = event?.data || {};
+    if (!data || (data.type !== "code-result" && data.type !== "code-error")) {
+      console.log('[Parent] Ignoring non-code message:', data.type);
+      return;
+    }
+    
+    console.log('[Parent] Processing message for cell:', data.cellId, 'version:', data.version);
     const { cellId, version } = data;
-    if (!cellId) return;
+    if (!cellId) {
+      console.warn('[Parent] No cellId in message');
+      return;
+    }
     const currentVersion = this._codeVersions.get(cellId);
-    if (currentVersion == null || version !== currentVersion) return;
+    console.log('[Parent] Current version:', currentVersion, 'Message version:', version);
+    if (currentVersion == null || version !== currentVersion) {
+      console.warn('[Parent] Version mismatch or no current version');
+      return;
+    }
 
     this._codeRunning.delete(cellId);
     this._codeRunTimers.delete(cellId);
@@ -218,6 +260,10 @@ export class CodeCellManager {
       this._pendingResolvers.set(cellId, { resolve, version: nextVersion });
 
       try {
+        console.log('[Parent] Sending code-exec message to iframe for cell:', cellId, 'version:', nextVersion);
+        console.log('[Parent] Code length:', code.length, 'chars');
+        console.log('[Parent] iframe exists:', !!iframe, 'contentWindow exists:', !!iframe?.contentWindow);
+        
         iframe?.contentWindow?.postMessage(
           {
             type: "code-exec",
@@ -227,7 +273,9 @@ export class CodeCellManager {
           },
           "*"
         );
+        console.log('[Parent] Message sent to iframe');
       } catch (err) {
+        console.error('[Parent] Failed to send message to iframe:', err);
         this._codeRunning.delete(cellId);
         this._pendingResolvers.delete(cellId);
         const msg =
