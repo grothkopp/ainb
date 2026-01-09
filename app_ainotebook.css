@@ -254,7 +254,7 @@
   border-left-width: 5px;
   border-left-style: solid;
   max-width: 980px;
-  min-width: 820px;
+  min-width: 0;
 }
 
 .cell-header {
@@ -1079,4 +1079,158 @@ dialog#settingsDialog {
 .cell-autorun-label input {
   margin: 0;
   cursor: pointer;
+}
+
+/* ===== Responsive / Mobile ===== */
+
+@media (max-width: 768px) {
+  #app-stage {
+    padding: 8px 8px 120px;
+  }
+
+  #notebook-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .toolbar-left,
+  .toolbar-right {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .toolbar-divider {
+    width: 100%;
+    height: 1px;
+  }
+
+  .notebook-toolbar-label {
+    flex-direction: column;
+    align-items: stretch;
+    line-height: 1.4;
+  }
+
+  .notebook-title-label input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .toolbar-run-group {
+    justify-content: flex-start;
+  }
+
+  .toolbar-add-group {
+    justify-content: flex-start;
+  }
+
+  .cell-header {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .cell-status {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 4px;
+  }
+
+  .cell-actions {
+    margin-left: auto;
+  }
+
+  .cell-type-pill .cell-name-input {
+    min-width: 60px;
+    max-width: 140px;
+  }
+
+  .cell-llm-select {
+    max-width: 100%;
+  }
+
+  .cell-body {
+    padding: 8px;
+  }
+
+  .cell-textarea {
+    font-size: 14px;
+  }
+
+  .model-picker-pill {
+    min-width: 140px;
+  }
+
+  .llm-log-panel {
+    width: 100%;
+    height: 90vh;
+    border-radius: 10px;
+  }
+
+  dialog#settingsDialog {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+
+  .settings-form {
+    max-height: 100vh;
+  }
+
+  .model-params-panel {
+    left: auto;
+    right: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  #app-stage {
+    padding: 6px 4px 100px;
+  }
+
+  #notebook-toolbar {
+    padding: 8px;
+    border-radius: 8px;
+  }
+
+  .cell {
+    border-radius: 8px;
+  }
+
+  .cell-header {
+    padding: 6px;
+  }
+
+  .cell-body {
+    padding: 6px;
+  }
+
+  .cell-action-btn {
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+
+  .cell-type-pill {
+    font-size: 10px;
+    padding: 0 8px;
+  }
+
+  .cell-index {
+    font-size: 11px;
+    padding: 2px 5px;
+  }
+
+  .toolbar-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .cell-add-pill {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
 }
