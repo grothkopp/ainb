@@ -136,7 +136,15 @@ export class TemplateManager {
    */
   expandTemplate(template, cells, cellType = null) {
     if (!template) return "";
-    return template.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, key) => {
+    
+    // Use a unique placeholder for escaped sequences
+    const ESCAPE_PLACEHOLDER = "\x00ESCAPED_BRACE\x00";
+    
+    // First, replace escaped \{{ with placeholder
+    let result = template.replace(/\\\{\{/g, ESCAPE_PLACEHOLDER);
+    
+    // Then expand templates
+    result = result.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, key) => {
       const trimmed = key.trim();
       const { base } = this.parseKeyPath(trimmed);
       
@@ -147,6 +155,9 @@ export class TemplateManager {
       
       return this.resolveTemplateValue(trimmed, cells);
     });
+    
+    // Finally, restore escaped sequences as literal {{
+    return result.replace(new RegExp(ESCAPE_PLACEHOLDER, "g"), "{{");
   }
 
   /**
@@ -157,7 +168,11 @@ export class TemplateManager {
   parseReferencesFromText(text) {
     if (!text || typeof text !== "string") return [];
     const refs = new Set();
-    text.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, expr) => {
+    
+    // Remove escaped sequences before parsing references
+    const cleanedText = text.replace(/\\\{\{/g, "");
+    
+    cleanedText.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, expr) => {
       const { base } = this.parseKeyPath(expr);
       if (base) refs.add(base);
       return "";

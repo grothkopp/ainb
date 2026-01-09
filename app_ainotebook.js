@@ -39,7 +39,7 @@ const DEFAULT_NOTEBOOK = {
         "- **Code**: Execute JavaScript to transform data\n\n" +
         "**4. Referencing Cells**\n" +
         "- Give each cell a unique name (e.g., 'notes', 'summary')\n" +
-        "- Reference cell outputs using `{{cellname}}` syntax\n" +
+        "- Reference cell outputs using `\\{{cellname}}` syntax\n" +
         "- Cells automatically re-run when their dependencies change\n\n" +
         "Try the example cells below to see how it works!",
       modelId: "",
@@ -66,7 +66,7 @@ const DEFAULT_NOTEBOOK = {
       name: "notes",
       text: "# Example Notes\n\n" +
         "- AI Notebook supports reactive programming\n" +
-        "- Cells can reference each other using {{name}} syntax\n" +
+        "- Cells can reference each other using \\{{name}} syntax\n" +
         "- Changes propagate automatically through the notebook",
       modelId: "",
       lastOutput: "",
@@ -81,9 +81,9 @@ const DEFAULT_NOTEBOOK = {
         "Summarize the notes from {{notes}} in 3 bullet points. " +
         "Respond with a JSON Array like [\"point 1\", \"point 2\", \"point 3\"].\n\n" +
         "💡 This is a **Prompt cell**. It sends text to an LLM and displays the response. " +
-        "Notice how it references {{notes}} from the markdown cell above. " +
+        "Notice how it references \\{{notes}} from the markdown cell above. " +
         "You can set a specific model for this cell, or use the notebook's default LLM. " +
-        "The system prompt comes from {{var_systemprompt}}.",
+        "The system prompt comes from \\{{var_systemprompt}}.",
       systemPrompt: "{{ var_systemprompt }}",
       params: "",
       _outputExpanded: false,
@@ -97,7 +97,7 @@ const DEFAULT_NOTEBOOK = {
       type: "code",
       name: "formatted",
       text: "// 💡 This is a **Code cell**. It runs JavaScript to transform data.\n" +
-        "// This cell takes the {{summary}} output (a JSON array) and formats it as markdown.\n" +
+        "// This cell takes the \\{{summary}} output (a JSON array) and formats it as markdown.\n" +
         "// Code cells can access outputs from other cells and perform any JavaScript operations.\n" +
         "// The 'autorun' flag means this cell runs automatically when its dependencies change.\n\n" +
         "const items = {{summary}};\n" +
