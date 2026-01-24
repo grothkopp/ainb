@@ -2,6 +2,10 @@
 
 An offline-first, local AI playground and notebook environment built on the LOST framework.
 
+## Live demo
+
+Try the running instance at **[ainb.dev](https://ainb.dev)** — you can use the AI Notebook directly in your browser and all data stays local.
+
 ## Overview
 
 AI Notebook allows you to create interactive notebooks with mixed cell types:

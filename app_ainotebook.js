@@ -236,13 +236,28 @@ class AiNotebookApp {
         title: "AI Notebook",
         menuTitle: "Notebooks",
         extraContent: () => {
-          const btn = document.createElement("button");
-          btn.className = "action-btn";
-          btn.title = "LLM Settings";
-          btn.innerHTML =
+          const fragment = document.createDocumentFragment();
+
+          const githubBtn = document.createElement("a");
+          githubBtn.className = "action-btn";
+          githubBtn.href = "https://github.com/grothkopp/ainb";
+          githubBtn.target = "_blank";
+          githubBtn.rel = "noreferrer noopener";
+          githubBtn.title = "Open GitHub repository";
+          githubBtn.setAttribute("aria-label", "Open GitHub repository");
+          githubBtn.innerHTML =
+            '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" role="img" aria-hidden="true"><path d="M12 .5C5.648.5.5 5.648.5 12c0 5.092 3.293 9.403 7.867 10.93.575.102.786-.25.786-.556 0-.274-.01-1.171-.016-2.126-3.2.695-3.878-1.375-3.878-1.375-.523-1.328-1.278-1.682-1.278-1.682-1.045-.715.08-.701.08-.701 1.157.081 1.766 1.188 1.766 1.188 1.028 1.763 2.698 1.254 3.356.959.104-.744.402-1.254.73-1.543-2.553-.29-5.238-1.277-5.238-5.683 0-1.256.448-2.283 1.183-3.088-.119-.29-.512-1.459.112-3.041 0 0 .965-.309 3.164 1.18a11.04 11.04 0 0 1 2.88-.387c.977.004 1.962.132 2.88.387 2.198-1.49 3.162-1.18 3.162-1.18.625 1.582.232 2.751.114 3.041.737.805 1.183 1.832 1.183 3.088 0 4.418-2.69 5.39-5.253 5.676.413.357.781 1.057.781 2.13 0 1.541-.014 2.782-.014 3.159 0 .309.208.663.792.55A10.999 10.999 0 0 0 23.5 12C23.5 5.648 18.352.5 12 .5Z"></path></svg>';
+          fragment.appendChild(githubBtn);
+
+          const settingsBtn = document.createElement("button");
+          settingsBtn.className = "action-btn";
+          settingsBtn.title = "LLM Settings";
+          settingsBtn.innerHTML =
             '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37a1.724 1.724 0 0 0 2.572 -1.065"></path><path d="M12 9a3 3 0 1 0 0 6a3 3 0 0 0 0 -6"></path></svg>';
-          btn.addEventListener("click", () => this.settingsDialog.show());
-          return btn;
+          settingsBtn.addEventListener("click", () => this.settingsDialog.show());
+          fragment.appendChild(settingsBtn);
+
+          return fragment;
         }
       },
       sidebar: {
