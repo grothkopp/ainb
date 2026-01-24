@@ -409,6 +409,16 @@ class AiNotebookApp {
         return newC;
       });
     }
+
+    // Re-apply staleness logic to ensure consistency (fixes invalid stale flags on load)
+    if (this.cellManager && Array.isArray(item.cells)) {
+      const freshCells = this.cellManager.applyStaleness(item.cells, item.cells);
+      const staleChanged = freshCells.some((c, i) => c._stale !== item.cells[i]._stale);
+      if (staleChanged) {
+        item.cells = freshCells;
+        changed = true;
+      }
+    }
     
     if (changed) {
       this.lost.update(item.id, { 
