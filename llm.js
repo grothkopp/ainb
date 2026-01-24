@@ -48,8 +48,12 @@ export class LlmManager {
             providersList.find((p) => p.id === m.providerId) ||
             providersList.find((p) => p.provider === m.provider);
           const providerName = provider?.provider || m.provider || "openai";
+          const modelId = m.model || (m.id && m.id.includes(':') ? m.id.split(':').slice(1).join(':') : m.id) || "";
+
           return {
             ...m,
+            id: `${this.getProviderLabel(providerName)}/${modelId}`,
+            model: modelId,
             provider: providerName,
             providerId: m.providerId || provider?.id,
             apiKey: m.apiKey || provider?.apiKey || "",
@@ -145,7 +149,71 @@ export class LlmManager {
    */
   getModelById(id) {
     if (!id) return null;
-    return (this.settings.cachedModels || []).find((m) => m.id === id) || null;
+    const cached = this.settings.cachedModels || [];
+    const exact = cached.find((m) => m.id === id);
+    if (exact) return exact;
+
+    // Fallback: look for model match in other providers
+    let desiredModel = null;
+    if (id.includes('/')) {
+         desiredModel = id.substring(id.indexOf('/') + 1);
+    } else if (id.includes(':')) {
+         desiredModel = id.substring(id.indexOf(':') + 1);
+    }
+
+    if (!desiredModel) return null;
+    
+    return cached.find(m => {
+        // m.model is the raw model ID (e.g. "gpt-4" or "openai/gpt-4")
+        // desiredModel might be "openai/gpt-4" (if came from OpenRouter)
+        
+        // 1. Exact raw model match
+        if (m.model === desiredModel) return true;
+        
+        // 2. Suffix match (e.g. desired="openai/gpt-4", available="gpt-4")
+        // or available="openai/gpt-4", desired="gpt-4"
+        // We check for slash boundary to avoid partial matches like "gpt-4" matching "sgpt-4"
+        if (desiredModel.endsWith(`/${m.model}`)) return true;
+        if (m.model.endsWith(`/${desiredModel}`)) return true;
+        
+        return false;
+    }) || null;
+  }
+
+  /**
+   * Migrates a legacy providerId:modelId to the new ProviderName/Model format.
+   * @param {string} id - The potential legacy ID.
+   * @returns {string} The new ID or the original if not a legacy ID.
+   */
+  migrateLegacyId(id) {
+    if (!id || typeof id !== 'string') return id;
+    
+    // Legacy format: providerId:modelId (where providerId is usually "provider_...")
+    // New format: ProviderLabel/modelId
+    
+    if (id.includes('/') && !id.includes(':')) return id; // Already likely new format
+    
+    const parts = id.split(':');
+    if (parts.length < 2) return id;
+    
+    const pId = parts[0];
+    const mId = parts.slice(1).join(':');
+    
+    // 1. Try provider lookup
+    const provider = (this.settings.providers || []).find(p => p.id === pId);
+    if (provider) {
+        const label = this.getProviderLabel(provider.provider);
+        return `${label}/${mId}`;
+    }
+
+    // 2. Fallback: Provider missing. Check if we have this model in cache under ANY provider?
+    const cached = this.settings.cachedModels || [];
+    const match = cached.find(m => m.model === mId);
+    if (match) {
+        return match.id;
+    }
+    
+    return id;
   }
 
   /**
@@ -242,7 +310,7 @@ export class LlmManager {
         models.forEach((m) =>
           collected.push({
             ...m,
-            id: `${provider.id}:${m.model}`,
+            id: `${this.getProviderLabel(provider.provider)}/${m.model}`,
             providerId: provider.id,
             provider: provider.provider,
             apiKey: provider.apiKey,
