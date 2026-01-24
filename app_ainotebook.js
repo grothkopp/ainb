@@ -366,23 +366,55 @@ class AiNotebookApp {
    */
   onNotebookUpdate(item) {
     if (!item) return;
+    
+    // Migrate notebook model ID to standard format
+    let needsUpdate = false;
+    if (item.notebookModelId) {
+      const newId = this.llmManager.convertToStandardId(item.notebookModelId);
+      if (newId !== item.notebookModelId) {
+        item.notebookModelId = newId;
+        needsUpdate = true;
+      }
+    }
+    
     // Normalize legacy fields into local-only flags
     if (Array.isArray(item.cells)) {
-      item.cells = item.cells.map((c) => ({
-        ...c,
-        _stale: c._stale ?? c.stale ?? false,
-        _outputExpanded: c._outputExpanded ?? c.outputExpanded ?? false,
-        lastRunInfo: c.lastRunInfo
-          ? {
-              ...c.lastRunInfo,
-              _rawRequest:
-                c.lastRunInfo._rawRequest ?? c.lastRunInfo.rawRequest ?? null,
-              _rawResponse:
-                c.lastRunInfo._rawResponse ?? c.lastRunInfo.rawResponse ?? null
-            }
-          : c.lastRunInfo
-      }));
+      item.cells = item.cells.map((c) => {
+        // Migrate cell model ID to standard format
+        let modelId = c.modelId;
+        if (modelId) {
+          const newModelId = this.llmManager.convertToStandardId(modelId);
+          if (newModelId !== modelId) {
+            modelId = newModelId;
+            needsUpdate = true;
+          }
+        }
+        return {
+          ...c,
+          modelId,
+          _stale: c._stale ?? c.stale ?? false,
+          _outputExpanded: c._outputExpanded ?? c.outputExpanded ?? false,
+          lastRunInfo: c.lastRunInfo
+            ? {
+                ...c.lastRunInfo,
+                _rawRequest:
+                  c.lastRunInfo._rawRequest ?? c.lastRunInfo.rawRequest ?? null,
+                _rawResponse:
+                  c.lastRunInfo._rawResponse ?? c.lastRunInfo.rawResponse ?? null
+              }
+            : c.lastRunInfo
+        };
+      });
     }
+    
+    // Persist migrated model IDs silently
+    if (needsUpdate) {
+      this.lost.update(item.id, { 
+        notebookModelId: item.notebookModelId,
+        cells: item.cells 
+      }, false);
+    }
+    
     this.currentNotebook = item;
     this.renderNotebook({ force: true });
   }
