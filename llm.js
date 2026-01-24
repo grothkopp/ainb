@@ -139,174 +139,13 @@ export class LlmManager {
   }
 
   /**
-   * Creates a standard model ID in the format "Provider/model-name".
-   * This format is portable across different provider configurations.
-   * @param {string} provider - The provider type (openai, claude, openrouter, custom).
-   * @param {string} modelName - The model name/id.
-   * @returns {string} Standard model ID.
-   */
-  createStandardModelId(provider, modelName) {
-    const providerLabel = this.getProviderLabel(provider);
-    return `${providerLabel}/${modelName}`;
-  }
-
-  /**
-   * Parses a standard model ID into its components.
-   * Handles both new format (Provider/model) and legacy format (provider_id:model).
-   * @param {string} id - The model ID to parse.
-   * @returns {Object|null} { provider, model } or null if invalid.
-   */
-  parseModelId(id) {
-    if (!id || typeof id !== "string") return null;
-
-    // New standard format: Provider/model-name (e.g., "OpenAI/gpt-4", "OpenRouter/openai/gpt-4")
-    if (id.includes("/")) {
-      const slashIndex = id.indexOf("/");
-      const providerLabel = id.slice(0, slashIndex);
-      const modelName = id.slice(slashIndex + 1);
-      // Convert display label back to provider type
-      const provider = this.getProviderFromLabel(providerLabel);
-      return { provider, providerLabel, model: modelName };
-    }
-
-    // Legacy format: provider_id:model-name (e.g., "provider_abc123:gpt-4")
-    if (id.includes(":")) {
-      const colonIndex = id.indexOf(":");
-      const providerId = id.slice(0, colonIndex);
-      const modelName = id.slice(colonIndex + 1);
-      // Try to find the provider by its ID
-      const providerObj = (this.settings.providers || []).find(p => p.id === providerId);
-      if (providerObj) {
-        return { provider: providerObj.provider, providerLabel: this.getProviderLabel(providerObj.provider), model: modelName, legacyProviderId: providerId };
-      }
-      // If provider not found, return with unknown provider
-      return { provider: "openai", providerLabel: "OpenAI", model: modelName, legacyProviderId: providerId };
-    }
-
-    return null;
-  }
-
-  /**
-   * Converts a provider display label back to the internal provider type.
-   * @param {string} label - Display label (OpenAI, Anthropic, OpenRouter, Custom).
-   * @returns {string} Provider type.
-   */
-  getProviderFromLabel(label) {
-    const lower = (label || "").toLowerCase();
-    if (lower === "anthropic" || lower === "claude") return "claude";
-    if (lower === "openrouter") return "openrouter";
-    if (lower === "custom") return "custom";
-    return "openai";
-  }
-
-  /**
-   * Extracts the base model name from a potentially provider-prefixed model string.
-   * E.g., "openai/gpt-4" -> "gpt-4", "gpt-4" -> "gpt-4"
-   * @param {string} modelName - The model name which may include provider prefix.
-   * @returns {string} The base model name.
-   */
-  extractBaseModelName(modelName) {
-    if (!modelName) return "";
-    // OpenRouter models often have format like "openai/gpt-4" or "anthropic/claude-3"
-    // Extract the last segment as the base model
-    const parts = modelName.split("/");
-    return parts[parts.length - 1];
-  }
-
-  /**
    * Retrieves a cached model by its unique ID.
-   * Handles both standard format (Provider/model) and legacy format (provider_id:model).
-   * If exact match not found, attempts to find the model through alternative providers
-   * ONLY when the original provider is not configured.
    * @param {string} id - The model ID.
    * @returns {Object|null} The model object or null.
    */
   getModelById(id) {
     if (!id) return null;
-    const models = this.settings.cachedModels || [];
-
-    // Direct match by ID
-    const direct = models.find((m) => m.id === id);
-    if (direct) return direct;
-
-    // Parse the ID to understand what we're looking for
-    const parsed = this.parseModelId(id);
-    if (!parsed) return null;
-
-    // For legacy format, try to find by provider ID and model
-    if (parsed.legacyProviderId) {
-      const byLegacy = models.find(m => 
-        m.providerId === parsed.legacyProviderId && m.model === parsed.model
-      );
-      if (byLegacy) return byLegacy;
-    }
-
-    // Try to find the model from the same provider type with exact model name
-    const sameProvider = models.find(m => 
-      m.provider === parsed.provider && m.model === parsed.model
-    );
-    if (sameProvider) return sameProvider;
-
-    // Check if the original provider type has ANY models configured
-    // Only fall back to alternative providers if the original provider is not available
-    const providerHasModels = models.some(m => m.provider === parsed.provider);
-    if (providerHasModels) {
-      // Original provider is configured but doesn't have this specific model
-      // Don't fall back - the model simply doesn't exist
-      return null;
-    }
-
-    // Fallback: original provider is NOT configured, try to find the base model
-    // from any other provider. E.g., OpenRouter/openai/gpt-4 -> OpenAI/gpt-4
-    const baseModel = this.extractBaseModelName(parsed.model);
-    const anyProvider = models.find(m => {
-      const mBase = this.extractBaseModelName(m.model);
-      return mBase === baseModel;
-    });
-    if (anyProvider) return anyProvider;
-
-    return null;
-  }
-
-  /**
-   * Converts a legacy model ID to the new standard format.
-   * @param {string} id - The model ID (may be legacy or standard).
-   * @returns {string} The standard format ID, or original if conversion not possible.
-   */
-  convertToStandardId(id) {
-    if (!id) return id;
-    
-    // Already in standard format
-    if (id.includes("/") && !id.includes(":")) {
-      return id;
-    }
-
-    // Legacy format - convert
-    const parsed = this.parseModelId(id);
-    if (parsed) {
-      return this.createStandardModelId(parsed.provider, parsed.model);
-    }
-
-    return id;
-  }
-
-  /**
-   * Resolves a model ID to a working model, with fallback to alternative providers.
-   * Returns both the resolved model and the canonical ID that should be stored.
-   * @param {string} id - The model ID to resolve.
-   * @returns {{ model: Object|null, canonicalId: string }} Resolved model and canonical ID.
-   */
-  resolveModelId(id) {
-    if (!id) return { model: null, canonicalId: "" };
-
-    const model = this.getModelById(id);
-    if (model) {
-      // Return the model with its canonical (standard) ID
-      const canonicalId = this.createStandardModelId(model.provider, model.model);
-      return { model, canonicalId };
-    }
-
-    return { model: null, canonicalId: id };
+    return (this.settings.cachedModels || []).find((m) => m.id === id) || null;
   }
 
   /**
@@ -403,8 +242,7 @@ export class LlmManager {
         models.forEach((m) =>
           collected.push({
             ...m,
-            // Use standard format: Provider/model-name
-            id: this.createStandardModelId(provider.provider, m.model),
+            id: `${provider.id}:${m.model}`,
             providerId: provider.id,
             provider: provider.provider,
             apiKey: provider.apiKey,
