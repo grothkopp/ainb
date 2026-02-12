@@ -229,7 +229,10 @@ export class PromptCellManager {
         this.stopRunningTimerLoop();
       }
       this.app.renderNotebook();
-      this.app.cellRenderer.updateStaleStatus(cells);
+      // Get fresh cells after output update
+      const freshItem = this.app.lost.getCurrent();
+      const freshCells = Array.isArray(freshItem?.cells) ? freshItem.cells : [];
+      this.app.cellRenderer.updateStaleStatus(freshCells);
     }
   }
 

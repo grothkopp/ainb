@@ -161,7 +161,7 @@ export class CellManager {
     this.app.cellRenderer.updateStaleStatus(finalCells);
 
     // Check if we need a full render (structure/metadata changed)
-    const getSig = (list) => list.map(c => `${c.id}:${c.type}:${c.name}:${c.modelId}:${c.params}:${c.autorun}`).join('|');
+    const getSig = (list) => list.map(c => `${c.id}:${c.type}:${c.modelId}:${c.params}:${c.autorun}`).join('|');
     if (getSig(prevCells) !== getSig(finalCells)) {
       this.app.renderNotebook({ force: true });
     }
@@ -207,6 +207,16 @@ export class CellManager {
       queue.push({ id, causeStale });
     };
 
+    // Detect name changes
+    const nameChanges = new Map(); // cellId -> { oldName, newName }
+    changedIds.forEach((id) => {
+      const prevCell = prevList.find((c) => c.id === id);
+      const newCell = next.find((c) => c.id === id);
+      if (prevCell && newCell && prevCell.name !== newCell.name) {
+        nameChanges.set(id, { oldName: prevCell.name, newName: newCell.name });
+      }
+    });
+
     // Prompts edited (non-output) become stale sources; output refresh clears staleness
     changedIds.forEach((id) => {
       const cell = next.find((c) => c.id === id);
@@ -215,6 +225,46 @@ export class CellManager {
         // UI changes (e.g. collapse) do not affect staleness
         return;
       }
+      
+      // Check if this is a pure name change (name changed but content/output didn't)
+      const isNameChange = nameChanges.has(id);
+      const isPureNameChange = isNameChange && reason === "name";
+      
+      // Special handling for pure name changes: cell itself doesn't become stale
+      if (isPureNameChange) {
+        const { oldName } = nameChanges.get(id);
+        // Mark cells that reference the old name as stale
+        if (oldName) {
+          const dependents = refPrev.get(oldName) || new Set();
+          dependents.forEach((depId) => {
+            const depCell = next.find((c) => c.id === depId);
+            if (depCell) {
+              depCell._stale = true;
+              staleSeeds.add(depId);
+              pushQueue(depId, true);
+            }
+          });
+        }
+        return; // Don't process as regular content change
+      }
+      
+      // For name changes combined with content/output changes, mark old name dependents as stale
+      if (isNameChange) {
+        const { oldName } = nameChanges.get(id);
+        if (oldName) {
+          const dependents = refPrev.get(oldName) || new Set();
+          dependents.forEach((depId) => {
+            const depCell = next.find((c) => c.id === depId);
+            if (depCell && depCell.id !== id) { // Don't mark self as stale
+              depCell._stale = true;
+              staleSeeds.add(depId);
+              pushQueue(depId, true);
+            }
+          });
+        }
+      }
+      
+      // Process the content/output change normally
       if (reason === "output") {
         cell._stale = false;
         // Output updated: mark this cell as fresh, but propagate staleness to its dependents
@@ -234,7 +284,8 @@ export class CellManager {
       if (
         cell._stale &&
         (cell.type === "prompt" || cell.type === "code") &&
-        !(reason === "output" && changedIds.has(cell.id))
+        !(reason === "output" && changedIds.has(cell.id)) &&
+        !(reason === "name" && changedIds.has(cell.id)) // Name changes don't persist stale status
       ) {
         const cur = next.find((c) => c.id === cell.id);
         if (cur) {
@@ -765,6 +816,18 @@ export class CellRenderer {
       }
       e.target.setCustomValidity("");
       
+      this.app.pendingFocusState = {
+        cellId: cell.id,
+        role: "name-input",
+        selection:
+          typeof nameInput.selectionStart === "number"
+            ? {
+                start: nameInput.selectionStart,
+                end: nameInput.selectionEnd
+              }
+            : null
+      };
+      
       this.app.cellManager.updateCells(
         (cells) => {
           const next = cells.map((c) =>
@@ -772,7 +835,7 @@ export class CellRenderer {
           );
           return next;
         },
-        { changedIds: [cell.id] }
+        { changedIds: [cell.id], reason: "name" }
       );
     });
     nameInput.addEventListener("focus", () => {
